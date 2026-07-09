@@ -72,19 +72,6 @@ class HomePage extends StatelessWidget {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 10),
-                      Text('عدد الأصول: ${controller.assets.length}'),
-                      Text(
-                        'مهام الصيانة المحفوظة: ${controller.localTaskCount}',
-                      ),
-                      Text('متوسط صحة الأصول: ${controller.averageHealth}%'),
-                      if (controller.errorMessage != null) ...[
-                        const SizedBox(height: 8),
-                        Text(
-                          controller.errorMessage!,
-                          style: const TextStyle(color: Colors.redAccent),
-                        ),
-                      ],
                     ],
                   ),
                 ),
