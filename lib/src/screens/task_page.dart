@@ -20,6 +20,7 @@ class _TaskPageState extends State<TaskPage> {
   String type = 'صيانة دورية';
   bool gps = false;
   bool photo = false;
+  bool saving = false;
 
   @override
   void dispose() {
@@ -32,13 +33,18 @@ class _TaskPageState extends State<TaskPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('تنفيذ المهمة')),
+      appBar: AppBar(title: const Text('تنفيذ مهمة')),
       body: ListView(
         padding: const EdgeInsets.all(18),
         children: [
           Text(
             widget.asset.name,
             style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            widget.asset.code,
+            style: const TextStyle(color: Color(0xFF60746F)),
           ),
           const SizedBox(height: 14),
           SegmentedButton<String>(
@@ -61,14 +67,18 @@ class _TaskPageState extends State<TaskPage> {
           _checkTile(
             icon: Icons.gps_fixed,
             title: 'إثبات الموقع',
-            subtitle: gps ? 'تم التحقق من موقع الفني' : 'اضغط للتحقق GPS',
+            subtitle: gps
+                ? 'تم التحقق محليًا من موقع المهمة'
+                : 'اضغط لتأكيد وجود الفني عند الأصل',
             value: gps,
             onTap: () => setState(() => gps = true),
           ),
           _checkTile(
             icon: Icons.photo_camera_outlined,
             title: 'صورة قبل العمل',
-            subtitle: photo ? 'تم حفظ الصورة محليًا' : 'اضغط لمحاكاة التصوير',
+            subtitle: photo
+                ? 'تم تسجيل مسار الصورة محليًا'
+                : 'اضغط لمحاكاة التقاط صورة',
             value: photo,
             onTap: () => setState(() => photo = true),
           ),
@@ -90,9 +100,15 @@ class _TaskPageState extends State<TaskPage> {
           ),
           const SizedBox(height: 18),
           FilledButton.icon(
-            onPressed: complete,
-            icon: const Icon(Icons.verified_outlined),
-            label: const Text('إغلاق المهمة وتخزينها'),
+            onPressed: saving ? null : complete,
+            icon: saving
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.save_outlined),
+            label: const Text('حفظ المهمة في SQLite'),
           ),
         ],
       ),
@@ -129,6 +145,8 @@ class _TaskPageState extends State<TaskPage> {
       );
       return;
     }
+
+    setState(() => saving = true);
     await widget.controller.completeTask(
       asset: widget.asset,
       type: type,
@@ -136,8 +154,8 @@ class _TaskPageState extends State<TaskPage> {
       parts: parts.text,
       signature: signature.text,
     );
-    if (mounted) {
-      Navigator.popUntil(context, (route) => route.isFirst);
-    }
+    if (!mounted) return;
+    setState(() => saving = false);
+    Navigator.popUntil(context, (route) => route.isFirst);
   }
 }

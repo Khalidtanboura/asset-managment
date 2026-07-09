@@ -13,8 +13,16 @@ class AppDatabase {
   Future<Database?> get database async {
     if (_db != null) return _db;
     try {
-      final path = join(await getDatabasesPath(), 'asset_management.db');
-      _db = await openDatabase(path, version: 1, onCreate: _createTables);
+      final databasesPath = await getDatabasesPath().timeout(
+        const Duration(seconds: 2),
+      );
+      final path = join(databasesPath, 'asset_management.db');
+      _db = await openDatabase(
+        path,
+        version: 2,
+        onCreate: _createTables,
+        onUpgrade: _resetTables,
+      ).timeout(const Duration(seconds: 3));
       return _db;
     } on MissingPluginException {
       return null;
@@ -25,7 +33,7 @@ class AppDatabase {
 
   Future<void> _createTables(Database db, int version) async {
     await db.execute('''
-      CREATE TABLE assets(
+      CREATE TABLE IF NOT EXISTS assets(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         code TEXT NOT NULL UNIQUE,
         name TEXT NOT NULL,
@@ -39,7 +47,7 @@ class AppDatabase {
       )
     ''');
     await db.execute('''
-      CREATE TABLE tasks(
+      CREATE TABLE IF NOT EXISTS tasks(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         assetId INTEGER NOT NULL,
         assetName TEXT NOT NULL,
@@ -53,6 +61,12 @@ class AppDatabase {
         createdAt TEXT NOT NULL
       )
     ''');
+  }
+
+  Future<void> _resetTables(Database db, int oldVersion, int newVersion) async {
+    await db.execute('DROP TABLE IF EXISTS tasks');
+    await db.execute('DROP TABLE IF EXISTS assets');
+    await _createTables(db, newVersion);
   }
 
   Future<void> seedIfEmpty() async {
@@ -90,8 +104,12 @@ class AppDatabase {
   Future<List<AssetModel>> getAssets() async {
     final db = await database;
     if (db == null) return List.unmodifiable(_memoryAssets);
-    final rows = await db.query('assets', orderBy: 'id DESC');
-    return rows.map(AssetModel.fromMap).toList();
+    try {
+      final rows = await db.query('assets', orderBy: 'id DESC');
+      return rows.map(AssetModel.fromMap).toList();
+    } catch (_) {
+      return List.unmodifiable(_memoryAssets);
+    }
   }
 
   Future<int> addAsset(AssetModel asset) async {
@@ -101,11 +119,17 @@ class AppDatabase {
       _memoryAssets.insert(0, asset.copyWith(id: id));
       return id;
     }
-    return db.insert(
-      'assets',
-      asset.toMap(),
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    try {
+      return db.insert(
+        'assets',
+        asset.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    } catch (_) {
+      final id = _memoryAssets.length + 1;
+      _memoryAssets.insert(0, asset.copyWith(id: id));
+      return id;
+    }
   }
 
   Future<void> updateAsset(AssetModel asset) async {
@@ -115,19 +139,28 @@ class AppDatabase {
       if (index != -1) _memoryAssets[index] = asset;
       return;
     }
-    await db.update(
-      'assets',
-      asset.toMap(),
-      where: 'id = ?',
-      whereArgs: [asset.id],
-    );
+    try {
+      await db.update(
+        'assets',
+        asset.toMap(),
+        where: 'id = ?',
+        whereArgs: [asset.id],
+      );
+    } catch (_) {
+      final index = _memoryAssets.indexWhere((item) => item.id == asset.id);
+      if (index != -1) _memoryAssets[index] = asset;
+    }
   }
 
   Future<List<TaskModel>> getTasks() async {
     final db = await database;
     if (db == null) return List.unmodifiable(_memoryTasks);
-    final rows = await db.query('tasks', orderBy: 'id DESC');
-    return rows.map(TaskModel.fromMap).toList();
+    try {
+      final rows = await db.query('tasks', orderBy: 'id DESC');
+      return rows.map(TaskModel.fromMap).toList();
+    } catch (_) {
+      return List.unmodifiable(_memoryTasks);
+    }
   }
 
   Future<void> addTask(TaskModel task) async {
@@ -137,22 +170,11 @@ class AppDatabase {
       _memoryTasks.insert(0, TaskModel.fromMap({...task.toMap(), 'id': id}));
       return;
     }
-    await db.insert('tasks', task.toMap());
-  }
-
-  Future<void> syncTasks() async {
-    final db = await database;
-    if (db == null) {
-      for (var i = 0; i < _memoryTasks.length; i++) {
-        _memoryTasks[i] = _memoryTasks[i].copyWith(synced: true);
-      }
-      return;
+    try {
+      await db.insert('tasks', task.toMap());
+    } catch (_) {
+      final id = _memoryTasks.length + 1;
+      _memoryTasks.insert(0, TaskModel.fromMap({...task.toMap(), 'id': id}));
     }
-    await db.update(
-      'tasks',
-      {'synced': 1},
-      where: 'synced = ?',
-      whereArgs: [0],
-    );
   }
 }

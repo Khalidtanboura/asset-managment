@@ -11,10 +11,10 @@ class AppController extends ChangeNotifier {
 
   List<AssetModel> assets = [];
   List<TaskModel> tasks = [];
-  bool loading = true;
-  bool online = true;
+  bool loading = false;
+  String? errorMessage;
 
-  int get pendingSync => tasks.where((task) => !task.synced).length;
+  int get localTaskCount => tasks.length;
 
   int get averageHealth {
     if (assets.isEmpty) return 0;
@@ -24,12 +24,19 @@ class AppController extends ChangeNotifier {
 
   Future<void> load() async {
     loading = true;
+    errorMessage = null;
     notifyListeners();
-    await db.seedIfEmpty();
-    assets = await db.getAssets();
-    tasks = await db.getTasks();
-    loading = false;
-    notifyListeners();
+
+    try {
+      await db.seedIfEmpty();
+      assets = await db.getAssets();
+      tasks = await db.getTasks();
+    } catch (_) {
+      errorMessage = 'تعذر فتح SQLite، لكن التطبيق بقي في الوضع المحلي.';
+    } finally {
+      loading = false;
+      notifyListeners();
+    }
   }
 
   Future<void> addAsset(AssetModel asset) async {
@@ -44,10 +51,13 @@ class AppController extends ChangeNotifier {
     required String parts,
     required String signature,
   }) async {
+    final assetId = asset.id;
+    if (assetId == null) return;
+
     final today = _today();
     await db.addTask(
       TaskModel(
-        assetId: asset.id!,
+        assetId: assetId,
         assetName: asset.name,
         type: type,
         notes: notes.trim().isEmpty ? 'لا توجد ملاحظات' : notes.trim(),
@@ -55,7 +65,7 @@ class AppController extends ChangeNotifier {
         signature: signature.trim(),
         photoPath: 'local/${asset.code}-before.jpg',
         gpsVerified: true,
-        synced: online,
+        synced: false,
         createdAt: today,
       ),
     );
@@ -69,17 +79,6 @@ class AppController extends ChangeNotifier {
       ),
     );
     await load();
-  }
-
-  Future<void> sync() async {
-    online = true;
-    await db.syncTasks();
-    await load();
-  }
-
-  void toggleOnline() {
-    online = !online;
-    notifyListeners();
   }
 
   String _today() {

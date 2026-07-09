@@ -36,7 +36,6 @@ class AssetDetailsPage extends StatelessWidget {
                 const SizedBox(height: 8),
                 _line(Icons.qr_code, 'الرقم: ${asset.code}'),
                 _line(Icons.category_outlined, 'التصنيف: ${asset.category}'),
-                _line(Icons.place_outlined, 'الموقع: ${asset.location}'),
                 _line(
                   Icons.health_and_safety_outlined,
                   'الحالة: ${asset.status}',

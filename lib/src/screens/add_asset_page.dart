@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../controllers/app_controller.dart';
 import '../models/asset_model.dart';
+import 'qr_scanner_page.dart';
 
 class AddAssetPage extends StatefulWidget {
   const AddAssetPage({super.key, required this.controller});
@@ -16,16 +17,25 @@ class _AddAssetPageState extends State<AddAssetPage> {
   final formKey = GlobalKey<FormState>();
   final code = TextEditingController();
   final name = TextEditingController();
-  final category = TextEditingController();
-  final location = TextEditingController();
   final manual = TextEditingController();
+
+  final categories = const [
+    'طاقة',
+    'مرافق',
+    'تكييف وتبريد',
+    'أمن وسلامة',
+    'شبكات واتصالات',
+    'معدات طبية',
+    'مركبات',
+    'أثاث وتجهيزات',
+  ];
+
+  String? selectedCategory;
 
   @override
   void dispose() {
     code.dispose();
     name.dispose();
-    category.dispose();
-    location.dispose();
     manual.dispose();
     super.dispose();
   }
@@ -39,10 +49,35 @@ class _AddAssetPageState extends State<AddAssetPage> {
         child: ListView(
           padding: const EdgeInsets.all(18),
           children: [
-            _field(code, 'رقم الأصل / QR ID', Icons.qr_code),
+            TextFormField(
+              controller: code,
+              validator: _required,
+              decoration: InputDecoration(
+                prefixIcon: const Icon(Icons.qr_code),
+                labelText: 'رقم الأصل / QR ID',
+                suffixIcon: IconButton(
+                  tooltip: 'فتح الكاميرا',
+                  onPressed: scanQr,
+                  icon: const Icon(Icons.photo_camera_outlined),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
             _field(name, 'اسم الأصل', Icons.inventory_2_outlined),
-            _field(category, 'التصنيف', Icons.category_outlined),
-            _field(location, 'الموقع', Icons.place_outlined),
+            DropdownButtonFormField<String>(
+              initialValue: selectedCategory,
+              validator: (value) => value == null ? 'اختر التصنيف' : null,
+              decoration: const InputDecoration(
+                prefixIcon: Icon(Icons.category_outlined),
+                labelText: 'التصنيف',
+              ),
+              items: [
+                for (final category in categories)
+                  DropdownMenuItem(value: category, child: Text(category)),
+              ],
+              onChanged: (value) => setState(() => selectedCategory = value),
+            ),
+            const SizedBox(height: 12),
             _field(
               manual,
               'تعليمات التشغيل والصيانة',
@@ -72,11 +107,23 @@ class _AddAssetPageState extends State<AddAssetPage> {
       child: TextFormField(
         controller: controller,
         maxLines: maxLines,
-        validator: (value) =>
-            value == null || value.trim().isEmpty ? 'هذا الحقل مطلوب' : null,
+        validator: _required,
         decoration: InputDecoration(prefixIcon: Icon(icon), labelText: label),
       ),
     );
+  }
+
+  String? _required(String? value) {
+    return value == null || value.trim().isEmpty ? 'هذا الحقل مطلوب' : null;
+  }
+
+  Future<void> scanQr() async {
+    final result = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(builder: (_) => const QrScannerPage()),
+    );
+    if (result == null || !mounted) return;
+    code.text = result;
   }
 
   Future<void> save() async {
@@ -85,8 +132,8 @@ class _AddAssetPageState extends State<AddAssetPage> {
       AssetModel(
         code: code.text.trim(),
         name: name.text.trim(),
-        category: category.text.trim(),
-        location: location.text.trim(),
+        category: selectedCategory!,
+        location: 'غير محدد',
         status: 'يعمل بكفاءة',
         lastMaintenance: 'لم تتم بعد',
         nextMaintenance: 'غير مجدولة',

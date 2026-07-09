@@ -43,7 +43,7 @@ class AssetTile extends StatelessWidget {
                   style: const TextStyle(color: Color(0xFF60746F)),
                 ),
                 Text(
-                  '${asset.location} - ${asset.status}',
+                  '${asset.category} - ${asset.status}',
                   style: const TextStyle(color: Color(0xFF60746F)),
                 ),
               ],

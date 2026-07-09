@@ -22,13 +22,6 @@ class HomePage extends StatelessWidget {
             title: const Text('إدارة الأصول'),
             actions: [
               IconButton(
-                tooltip: controller.online ? 'متصل' : 'غير متصل',
-                onPressed: controller.toggleOnline,
-                icon: Icon(
-                  controller.online ? Icons.cloud_done : Icons.cloud_off,
-                ),
-              ),
-              IconButton(
                 tooltip: 'التقارير',
                 onPressed: () => Navigator.push(
                   context,
@@ -50,68 +43,97 @@ class HomePage extends StatelessWidget {
             icon: const Icon(Icons.add),
             label: const Text('إضافة أصل'),
           ),
-          body: controller.loading
-              ? const Center(child: CircularProgressIndicator())
-              : ListView(
-                  padding: const EdgeInsets.all(18),
-                  children: [
-                    AppCard(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+          body: RefreshIndicator(
+            onRefresh: controller.load,
+            child: ListView(
+              padding: const EdgeInsets.all(18),
+              children: [
+                AppCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
                         children: [
-                          const Text(
-                            'لوحة المتابعة',
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                            ),
+                          const Icon(
+                            Icons.storage_outlined,
+                            color: Color(0xFF1B6B5F),
                           ),
-                          const SizedBox(height: 8),
-                          Text('عدد الأصول: ${controller.assets.length}'),
-                          Text('مهام الصيانة: ${controller.tasks.length}'),
-                          Text('غير متزامن: ${controller.pendingSync}'),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    FilledButton.icon(
-                      onPressed: controller.assets.isEmpty
-                          ? null
-                          : () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => AssetDetailsPage(
-                                  controller: controller,
-                                  asset: controller.assets.first,
-                                ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              controller.loading
+                                  ? 'جاري قراءة SQLite...'
+                                  : 'تطبيق Offline بالكامل',
+                              style: const TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
-                      icon: const Icon(Icons.qr_code_scanner),
-                      label: const Text('محاكاة مسح QR / NFC'),
-                    ),
-                    const SizedBox(height: 18),
-                    Text(
-                      'الأصول',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
+                          ),
+                        ],
                       ),
-                    ),
-                    const SizedBox(height: 10),
-                    for (final asset in controller.assets)
-                      AssetTile(
-                        asset: asset,
-                        onTap: () => Navigator.push(
+                      const SizedBox(height: 10),
+                      Text('عدد الأصول: ${controller.assets.length}'),
+                      Text(
+                        'مهام الصيانة المحفوظة: ${controller.localTaskCount}',
+                      ),
+                      Text('متوسط صحة الأصول: ${controller.averageHealth}%'),
+                      if (controller.errorMessage != null) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          controller.errorMessage!,
+                          style: const TextStyle(color: Colors.redAccent),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                FilledButton.icon(
+                  onPressed: controller.assets.isEmpty
+                      ? null
+                      : () => Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (_) => AssetDetailsPage(
                               controller: controller,
-                              asset: asset,
+                              asset: controller.assets.first,
                             ),
                           ),
                         ),
-                      ),
-                  ],
+                  icon: const Icon(Icons.qr_code_scanner),
+                  label: const Text('محاكاة مسح QR / NFC'),
                 ),
+                const SizedBox(height: 18),
+                Text(
+                  'الأصول',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 10),
+                if (controller.assets.isEmpty)
+                  const AppCard(
+                    child: Text('لا توجد أصول بعد. اضغط زر إضافة أصل للبدء.'),
+                  )
+                else
+                  for (final asset in controller.assets)
+                    AssetTile(
+                      asset: asset,
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => AssetDetailsPage(
+                            controller: controller,
+                            asset: asset,
+                          ),
+                        ),
+                      ),
+                    ),
+                const SizedBox(height: 80),
+              ],
+            ),
+          ),
         );
       },
     );
