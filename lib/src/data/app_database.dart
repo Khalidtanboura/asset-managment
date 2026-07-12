@@ -19,7 +19,7 @@ class AppDatabase {
       final path = join(databasesPath, 'asset_management.db');
       _db = await openDatabase(
         path,
-        version: 2,
+        version: 3,
         onCreate: _createTables,
         onUpgrade: _resetTables,
       ).timeout(const Duration(seconds: 3));
@@ -52,11 +52,15 @@ class AppDatabase {
         assetId INTEGER NOT NULL,
         assetName TEXT NOT NULL,
         type TEXT NOT NULL,
+        faultType TEXT NOT NULL,
         notes TEXT NOT NULL,
         parts TEXT NOT NULL,
-        signature TEXT NOT NULL,
-        photoPath TEXT NOT NULL,
-        gpsVerified INTEGER NOT NULL,
+        resolution TEXT NOT NULL,
+        statusAfter TEXT NOT NULL,
+        healthAfter INTEGER NOT NULL,
+        maintenancePhoto BLOB,
+        faultBeforePhoto BLOB,
+        faultAfterPhoto BLOB,
         synced INTEGER NOT NULL,
         createdAt TEXT NOT NULL
       )
@@ -149,6 +153,22 @@ class AppDatabase {
     } catch (_) {
       final index = _memoryAssets.indexWhere((item) => item.id == asset.id);
       if (index != -1) _memoryAssets[index] = asset;
+    }
+  }
+
+  Future<void> deleteAsset(AssetModel asset) async {
+    final db = await database;
+    if (db == null) {
+      _memoryTasks.removeWhere((task) => task.assetId == asset.id);
+      _memoryAssets.removeWhere((item) => item.id == asset.id);
+      return;
+    }
+    try {
+      await db.delete('tasks', where: 'assetId = ?', whereArgs: [asset.id]);
+      await db.delete('assets', where: 'id = ?', whereArgs: [asset.id]);
+    } catch (_) {
+      _memoryTasks.removeWhere((task) => task.assetId == asset.id);
+      _memoryAssets.removeWhere((item) => item.id == asset.id);
     }
   }
 

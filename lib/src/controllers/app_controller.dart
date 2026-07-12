@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 
 import '../data/app_database.dart';
@@ -44,12 +46,23 @@ class AppController extends ChangeNotifier {
     await load();
   }
 
+  Future<void> deleteAsset(AssetModel asset) async {
+    await db.deleteAsset(asset);
+    await load();
+  }
+
   Future<void> completeTask({
     required AssetModel asset,
     required String type,
+    required String faultType,
     required String notes,
     required String parts,
-    required String signature,
+    required String resolution,
+    required String statusAfter,
+    required int healthAfter,
+    Uint8List? maintenancePhoto,
+    Uint8List? faultBeforePhoto,
+    Uint8List? faultAfterPhoto,
   }) async {
     final assetId = asset.id;
     if (assetId == null) return;
@@ -60,11 +73,17 @@ class AppController extends ChangeNotifier {
         assetId: assetId,
         assetName: asset.name,
         type: type,
+        faultType: faultType.trim(),
         notes: notes.trim().isEmpty ? 'لا توجد ملاحظات' : notes.trim(),
         parts: parts.trim().isEmpty ? 'لم يتم استبدال قطع' : parts.trim(),
-        signature: signature.trim(),
-        photoPath: 'local/${asset.code}-before.jpg',
-        gpsVerified: true,
+        resolution: resolution.trim().isEmpty
+            ? 'تمت المعالجة حسب الإجراء الفني'
+            : resolution.trim(),
+        statusAfter: statusAfter,
+        healthAfter: healthAfter,
+        maintenancePhoto: maintenancePhoto,
+        faultBeforePhoto: faultBeforePhoto,
+        faultAfterPhoto: faultAfterPhoto,
         synced: false,
         createdAt: today,
       ),
@@ -72,8 +91,8 @@ class AppController extends ChangeNotifier {
 
     await db.updateAsset(
       asset.copyWith(
-        status: 'يعمل بكفاءة',
-        health: 96,
+        status: statusAfter,
+        health: healthAfter,
         lastMaintenance: today,
         nextMaintenance: _afterSixMonths(),
       ),

@@ -5,6 +5,7 @@ import '../widgets/app_card.dart';
 import '../widgets/asset_tile.dart';
 import 'add_asset_page.dart';
 import 'asset_details_page.dart';
+import 'qr_scanner_page.dart';
 import 'reports_page.dart';
 
 class HomePage extends StatelessWidget {
@@ -93,17 +94,9 @@ class HomePage extends StatelessWidget {
                 FilledButton.icon(
                   onPressed: controller.assets.isEmpty
                       ? null
-                      : () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => AssetDetailsPage(
-                              controller: controller,
-                              asset: controller.assets.first,
-                            ),
-                          ),
-                        ),
+                      : () => _scanAssetQr(context),
                   icon: const Icon(Icons.qr_code_scanner),
-                  label: const Text('محاكاة مسح QR / NFC'),
+                  label: const Text('مسح QR للأصل'),
                 ),
                 const SizedBox(height: 18),
                 Text(
@@ -137,6 +130,37 @@ class HomePage extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+
+  Future<void> _scanAssetQr(BuildContext context) async {
+    final scannedCode = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(builder: (_) => const QrScannerPage()),
+    );
+
+    if (scannedCode == null || !context.mounted) return;
+
+    final normalizedCode = scannedCode.trim().toLowerCase();
+    final matchingAssets = controller.assets.where(
+      (asset) => asset.code.trim().toLowerCase() == normalizedCode,
+    );
+
+    if (matchingAssets.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('لم يتم العثور على أصل بالكود: $scannedCode')),
+      );
+      return;
+    }
+
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AssetDetailsPage(
+          controller: controller,
+          asset: matchingAssets.first,
+        ),
+      ),
     );
   }
 }

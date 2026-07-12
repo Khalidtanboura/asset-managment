@@ -61,9 +61,41 @@ class AssetDetailsPage extends StatelessWidget {
             icon: const Icon(Icons.build_outlined),
             label: const Text('بدء مهمة صيانة'),
           ),
+          const SizedBox(height: 10),
+          OutlinedButton.icon(
+            onPressed: () => _confirmDelete(context),
+            icon: const Icon(Icons.delete_outline),
+            label: const Text('حذف الأصل'),
+            style: OutlinedButton.styleFrom(foregroundColor: Colors.redAccent),
+          ),
         ],
       ),
     );
+  }
+
+  Future<void> _confirmDelete(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('حذف الأصل'),
+        content: Text('هل تريد حذف "${asset.name}" وكل مهامه المحفوظة؟'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('إلغاء'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+            child: const Text('حذف'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !context.mounted) return;
+    await controller.deleteAsset(asset);
+    if (context.mounted) Navigator.popUntil(context, (route) => route.isFirst);
   }
 
   Widget _line(IconData icon, String text) {

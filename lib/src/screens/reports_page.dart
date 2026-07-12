@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../controllers/app_controller.dart';
+import '../models/task_model.dart';
 import '../widgets/app_card.dart';
 
 class ReportsPage extends StatelessWidget {
@@ -59,8 +60,15 @@ class ReportsPage extends StatelessWidget {
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                           Text('${task.type} - ${task.createdAt}'),
+                          if (task.faultType.isNotEmpty)
+                            Text('نوع العطل: ${task.faultType}'),
                           Text('الملاحظات: ${task.notes}'),
                           Text('قطع الغيار: ${task.parts}'),
+                          Text('الإجراء: ${task.resolution}'),
+                          Text(
+                            'الحالة بعد المهمة: ${task.statusAfter} - ${task.healthAfter}%',
+                          ),
+                          Text('الصور المحفوظة: ${_photoCount(task)}'),
                           const Text('الحفظ: SQLite محلي'),
                         ],
                       ),
@@ -71,5 +79,13 @@ class ReportsPage extends StatelessWidget {
         );
       },
     );
+  }
+
+  int _photoCount(TaskModel task) {
+    return [
+      task.maintenancePhoto,
+      task.faultBeforePhoto,
+      task.faultAfterPhoto,
+    ].where((photo) => photo != null).length;
   }
 }
