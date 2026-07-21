@@ -60,6 +60,11 @@ class ReportsPage extends StatelessWidget {
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                           Text('${task.type} - ${task.createdAt}'),
+                          Text(
+                            task.completed
+                                ? 'الإتمام: مكتملة بتاريخ ${task.completedAt}'
+                                : 'الإتمام: غير مكتملة',
+                          ),
                           if (task.faultType.isNotEmpty)
                             Text('نوع العطل: ${task.faultType}'),
                           Text('الملاحظات: ${task.notes}'),
@@ -83,7 +88,9 @@ class ReportsPage extends StatelessWidget {
 
   int _photoCount(TaskModel task) {
     return [
+      task.maintenanceBeforePhoto,
       task.maintenancePhoto,
+      task.maintenanceAfterPhoto,
       task.faultBeforePhoto,
       task.faultAfterPhoto,
     ].where((photo) => photo != null).length;

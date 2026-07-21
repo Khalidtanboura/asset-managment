@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 class AssetModel {
   const AssetModel({
     this.id,
@@ -10,6 +12,7 @@ class AssetModel {
     required this.nextMaintenance,
     required this.health,
     required this.manual,
+    this.photo,
   });
 
   final int? id;
@@ -22,6 +25,7 @@ class AssetModel {
   final String nextMaintenance;
   final int health;
   final String manual;
+  final Uint8List? photo;
 
   Map<String, Object?> toMap() {
     return {
@@ -35,6 +39,7 @@ class AssetModel {
       'nextMaintenance': nextMaintenance,
       'health': health,
       'manual': manual,
+      'photo': photo,
     };
   }
 
@@ -50,6 +55,7 @@ class AssetModel {
       nextMaintenance: map['nextMaintenance'] as String,
       health: map['health'] as int,
       manual: map['manual'] as String,
+      photo: map['photo'] as Uint8List?,
     );
   }
 
@@ -59,6 +65,7 @@ class AssetModel {
     String? lastMaintenance,
     String? nextMaintenance,
     int? health,
+    Uint8List? photo,
   }) {
     return AssetModel(
       id: id ?? this.id,
@@ -71,6 +78,7 @@ class AssetModel {
       nextMaintenance: nextMaintenance ?? this.nextMaintenance,
       health: health ?? this.health,
       manual: manual,
+      photo: photo ?? this.photo,
     );
   }
 }

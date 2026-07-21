@@ -19,9 +19,9 @@ class AppDatabase {
       final path = join(databasesPath, 'asset_management.db');
       _db = await openDatabase(
         path,
-        version: 3,
+        version: 6,
         onCreate: _createTables,
-        onUpgrade: _resetTables,
+        onUpgrade: _upgradeTables,
       ).timeout(const Duration(seconds: 3));
       return _db;
     } on MissingPluginException {
@@ -43,7 +43,8 @@ class AppDatabase {
         lastMaintenance TEXT NOT NULL,
         nextMaintenance TEXT NOT NULL,
         health INTEGER NOT NULL,
-        manual TEXT NOT NULL
+        manual TEXT NOT NULL,
+        photo BLOB
       )
     ''');
     await db.execute('''
@@ -58,19 +59,56 @@ class AppDatabase {
         resolution TEXT NOT NULL,
         statusAfter TEXT NOT NULL,
         healthAfter INTEGER NOT NULL,
+        maintenanceBeforePhoto BLOB,
         maintenancePhoto BLOB,
+        maintenanceAfterPhoto BLOB,
         faultBeforePhoto BLOB,
         faultAfterPhoto BLOB,
+        completed INTEGER NOT NULL,
+        completedAt TEXT NOT NULL,
         synced INTEGER NOT NULL,
         createdAt TEXT NOT NULL
       )
     ''');
   }
 
-  Future<void> _resetTables(Database db, int oldVersion, int newVersion) async {
+  Future<void> _upgradeTables(
+    Database db,
+    int oldVersion,
+    int newVersion,
+  ) async {
+    if (oldVersion < 3) {
+      await _resetTables(db, newVersion);
+      return;
+    }
+    if (oldVersion < 4) {
+      await db.execute('ALTER TABLE assets ADD COLUMN photo BLOB');
+    }
+    if (oldVersion < 5) {
+      await db.execute(
+        'ALTER TABLE tasks ADD COLUMN maintenanceBeforePhoto BLOB',
+      );
+      await db.execute(
+        'ALTER TABLE tasks ADD COLUMN maintenanceAfterPhoto BLOB',
+      );
+    }
+    if (oldVersion < 6) {
+      await db.execute(
+        'ALTER TABLE tasks ADD COLUMN completed INTEGER NOT NULL DEFAULT 1',
+      );
+      await db.execute(
+        'ALTER TABLE tasks ADD COLUMN completedAt TEXT NOT NULL DEFAULT ""',
+      );
+      await db.execute(
+        'UPDATE tasks SET completedAt = createdAt WHERE completedAt = ""',
+      );
+    }
+  }
+
+  Future<void> _resetTables(Database db, int version) async {
     await db.execute('DROP TABLE IF EXISTS tasks');
     await db.execute('DROP TABLE IF EXISTS assets');
-    await _createTables(db, newVersion);
+    await _createTables(db, version);
   }
 
   Future<void> seedIfEmpty() async {

@@ -51,6 +51,14 @@ class AppController extends ChangeNotifier {
     await load();
   }
 
+  Future<void> updateAssetPhoto({
+    required AssetModel asset,
+    required Uint8List photo,
+  }) async {
+    await db.updateAsset(asset.copyWith(photo: photo));
+    await load();
+  }
+
   Future<void> completeTask({
     required AssetModel asset,
     required String type,
@@ -60,7 +68,9 @@ class AppController extends ChangeNotifier {
     required String resolution,
     required String statusAfter,
     required int healthAfter,
+    Uint8List? maintenanceBeforePhoto,
     Uint8List? maintenancePhoto,
+    Uint8List? maintenanceAfterPhoto,
     Uint8List? faultBeforePhoto,
     Uint8List? faultAfterPhoto,
   }) async {
@@ -81,9 +91,13 @@ class AppController extends ChangeNotifier {
             : resolution.trim(),
         statusAfter: statusAfter,
         healthAfter: healthAfter,
+        maintenanceBeforePhoto: maintenanceBeforePhoto,
         maintenancePhoto: maintenancePhoto,
+        maintenanceAfterPhoto: maintenanceAfterPhoto,
         faultBeforePhoto: faultBeforePhoto,
         faultAfterPhoto: faultAfterPhoto,
+        completed: true,
+        completedAt: today,
         synced: false,
         createdAt: today,
       ),

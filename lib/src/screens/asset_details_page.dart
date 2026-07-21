@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../controllers/app_controller.dart';
 import '../models/asset_model.dart';
 import '../widgets/app_card.dart';
 import 'task_page.dart';
 
-class AssetDetailsPage extends StatelessWidget {
+class AssetDetailsPage extends StatefulWidget {
   const AssetDetailsPage({
     super.key,
     required this.controller,
@@ -14,6 +15,22 @@ class AssetDetailsPage extends StatelessWidget {
 
   final AppController controller;
   final AssetModel asset;
+
+  @override
+  State<AssetDetailsPage> createState() => _AssetDetailsPageState();
+}
+
+class _AssetDetailsPageState extends State<AssetDetailsPage> {
+  final picker = ImagePicker();
+  late AssetModel asset;
+
+  AppController get controller => widget.controller;
+
+  @override
+  void initState() {
+    super.initState();
+    asset = widget.asset;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,6 +43,8 @@ class AssetDetailsPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                _assetPhoto(),
+                const SizedBox(height: 12),
                 Text(
                   asset.name,
                   style: const TextStyle(
@@ -71,6 +90,95 @@ class AssetDetailsPage extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Widget _assetPhoto() {
+    final photo = asset.photo;
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: _pickAssetPhoto,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Stack(
+          alignment: Alignment.bottomCenter,
+          children: [
+            if (photo == null)
+              Container(
+                height: 190,
+                width: double.infinity,
+                color: const Color(0xFFE3F3EF),
+                child: const Icon(
+                  Icons.inventory_2_outlined,
+                  size: 64,
+                  color: Color(0xFF1B6B5F),
+                ),
+              )
+            else
+              Image.memory(
+                photo,
+                height: 220,
+                width: double.infinity,
+                fit: BoxFit.cover,
+              ),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              color: Colors.black.withValues(alpha: 0.55),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.add_a_photo_outlined,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    photo == null ? 'إضافة صورة للأصل' : 'تغيير صورة الأصل',
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickAssetPhoto() async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: const Text('التقاط صورة بالكاميرا'),
+              onTap: () => Navigator.pop(context, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('اختيار صورة من المعرض'),
+              onTap: () => Navigator.pop(context, ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (source == null) return;
+
+    final image = await picker.pickImage(
+      source: source,
+      imageQuality: 72,
+      maxWidth: 1400,
+    );
+    if (image == null || !mounted) return;
+
+    final bytes = await image.readAsBytes();
+    await controller.updateAssetPhoto(asset: asset, photo: bytes);
+    if (!mounted) return;
+    setState(() => asset = asset.copyWith(photo: bytes));
   }
 
   Future<void> _confirmDelete(BuildContext context) async {

@@ -12,9 +12,13 @@ class TaskModel {
     required this.resolution,
     required this.statusAfter,
     required this.healthAfter,
+    required this.maintenanceBeforePhoto,
     required this.maintenancePhoto,
+    required this.maintenanceAfterPhoto,
     required this.faultBeforePhoto,
     required this.faultAfterPhoto,
+    required this.completed,
+    required this.completedAt,
     required this.synced,
     required this.createdAt,
   });
@@ -29,9 +33,13 @@ class TaskModel {
   final String resolution;
   final String statusAfter;
   final int healthAfter;
+  final Uint8List? maintenanceBeforePhoto;
   final Uint8List? maintenancePhoto;
+  final Uint8List? maintenanceAfterPhoto;
   final Uint8List? faultBeforePhoto;
   final Uint8List? faultAfterPhoto;
+  final bool completed;
+  final String completedAt;
   final bool synced;
   final String createdAt;
 
@@ -47,9 +55,13 @@ class TaskModel {
       'resolution': resolution,
       'statusAfter': statusAfter,
       'healthAfter': healthAfter,
+      'maintenanceBeforePhoto': maintenanceBeforePhoto,
       'maintenancePhoto': maintenancePhoto,
+      'maintenanceAfterPhoto': maintenanceAfterPhoto,
       'faultBeforePhoto': faultBeforePhoto,
       'faultAfterPhoto': faultAfterPhoto,
+      'completed': completed ? 1 : 0,
+      'completedAt': completedAt,
       'synced': synced ? 1 : 0,
       'createdAt': createdAt,
     };
@@ -67,9 +79,13 @@ class TaskModel {
       resolution: map['resolution'] as String? ?? '',
       statusAfter: map['statusAfter'] as String? ?? 'يعمل بكفاءة',
       healthAfter: map['healthAfter'] as int? ?? 96,
+      maintenanceBeforePhoto: map['maintenanceBeforePhoto'] as Uint8List?,
       maintenancePhoto: map['maintenancePhoto'] as Uint8List?,
+      maintenanceAfterPhoto: map['maintenanceAfterPhoto'] as Uint8List?,
       faultBeforePhoto: map['faultBeforePhoto'] as Uint8List?,
       faultAfterPhoto: map['faultAfterPhoto'] as Uint8List?,
+      completed: (map['completed'] as int? ?? 1) == 1,
+      completedAt: map['completedAt'] as String? ?? map['createdAt'] as String,
       synced: map['synced'] == 1,
       createdAt: map['createdAt'] as String,
     );
@@ -87,9 +103,13 @@ class TaskModel {
       resolution: resolution,
       statusAfter: statusAfter,
       healthAfter: healthAfter,
+      maintenanceBeforePhoto: maintenanceBeforePhoto,
       maintenancePhoto: maintenancePhoto,
+      maintenanceAfterPhoto: maintenanceAfterPhoto,
       faultBeforePhoto: faultBeforePhoto,
       faultAfterPhoto: faultAfterPhoto,
+      completed: completed,
+      completedAt: completedAt,
       synced: synced ?? this.synced,
       createdAt: createdAt,
     );

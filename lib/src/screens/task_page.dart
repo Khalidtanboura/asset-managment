@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../controllers/app_controller.dart';
 import '../models/asset_model.dart';
+import '../models/task_model.dart';
 
 class TaskPage extends StatefulWidget {
   const TaskPage({super.key, required this.controller, required this.asset});
@@ -26,7 +27,8 @@ class _TaskPageState extends State<TaskPage> {
   String faultType = 'كهربائي';
   String statusAfter = 'يعمل بكفاءة';
   int healthAfter = 96;
-  Uint8List? maintenancePhoto;
+  Uint8List? maintenanceBeforePhoto;
+  Uint8List? maintenanceAfterPhoto;
   Uint8List? faultBeforePhoto;
   Uint8List? faultAfterPhoto;
   bool saving = false;
@@ -100,7 +102,7 @@ class _TaskPageState extends State<TaskPage> {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.save_outlined),
-            label: const Text('حفظ المهمة في SQLite'),
+            label: const Text('تنفيذ وتسجيل إتمام الصيانة'),
           ),
         ],
       ),
@@ -109,11 +111,33 @@ class _TaskPageState extends State<TaskPage> {
 
   List<Widget> _maintenanceFields() {
     return [
-      _photoTile(
-        title: 'صورة ما تم صيانته',
-        subtitle: 'أرفق صورة واضحة بعد إنهاء الصيانة',
-        photo: maintenancePhoto,
-        onTap: () => _pickPhoto((bytes) => maintenancePhoto = bytes),
+      if (_lastMaintenanceTask != null) ...[
+        _previousMaintenancePhotos(_lastMaintenanceTask!),
+        const SizedBox(height: 12),
+      ],
+      Row(
+        children: [
+          Expanded(
+            child: _photoTile(
+              title: 'قبل الصيانة',
+              subtitle: 'صورة حالة الأصل قبل البدء',
+              photo: maintenanceBeforePhoto,
+              compact: true,
+              onTap: () =>
+                  _pickPhoto((bytes) => maintenanceBeforePhoto = bytes),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: _photoTile(
+              title: 'بعد الصيانة',
+              subtitle: 'صورة النتيجة بعد الانتهاء',
+              photo: maintenanceAfterPhoto,
+              compact: true,
+              onTap: () => _pickPhoto((bytes) => maintenanceAfterPhoto = bytes),
+            ),
+          ),
+        ],
       ),
       const SizedBox(height: 12),
       TextField(
@@ -133,6 +157,85 @@ class _TaskPageState extends State<TaskPage> {
         ),
       ),
     ];
+  }
+
+  TaskModel? get _lastMaintenanceTask {
+    final assetId = widget.asset.id;
+    if (assetId == null) return null;
+
+    for (final task in widget.controller.tasks) {
+      final hasMaintenancePhotos =
+          task.maintenanceBeforePhoto != null ||
+          task.maintenanceAfterPhoto != null;
+      if (task.assetId == assetId &&
+          task.type == 'صيانة دورية' &&
+          hasMaintenancePhotos) {
+        return task;
+      }
+    }
+    return null;
+  }
+
+  Widget _previousMaintenancePhotos(TaskModel task) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.history, color: Color(0xFF1B6B5F)),
+                SizedBox(width: 8),
+                Text(
+                  'آخر صيانة محفوظة',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              '${task.createdAt} - ${task.notes}',
+              style: const TextStyle(color: Color(0xFF60746F)),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                _previousPhotoPreview('قبل', task.maintenanceBeforePhoto),
+                const SizedBox(width: 8),
+                _previousPhotoPreview('بعد', task.maintenanceAfterPhoto),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _previousPhotoPreview(String label, Uint8List? photo) {
+    return Expanded(
+      child: Column(
+        children: [
+          AspectRatio(
+            aspectRatio: 1,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: photo == null
+                  ? Container(
+                      color: const Color(0xFFE8EFED),
+                      child: const Icon(
+                        Icons.image_not_supported_outlined,
+                        color: Color(0xFF60746F),
+                      ),
+                    )
+                  : Image.memory(photo, fit: BoxFit.cover),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(label, style: const TextStyle(fontSize: 12)),
+        ],
+      ),
+    );
   }
 
   List<Widget> _faultFields() {
@@ -338,17 +441,19 @@ class _TaskPageState extends State<TaskPage> {
 
   Future<void> complete() async {
     final isFault = type == 'إصلاح عطل';
-    final missingMaintenancePhoto = !isFault && maintenancePhoto == null;
+    final missingMaintenancePhotos =
+        !isFault &&
+        (maintenanceBeforePhoto == null || maintenanceAfterPhoto == null);
     final missingFaultPhotos =
         isFault && (faultBeforePhoto == null || faultAfterPhoto == null);
 
-    if (missingMaintenancePhoto || missingFaultPhotos) {
+    if (missingMaintenancePhotos || missingFaultPhotos) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
             isFault
                 ? 'أرفق صورة قبل الإصلاح وصورة بعد الإصلاح'
-                : 'أرفق صورة لما تم صيانته',
+                : 'أرفق صورة قبل الصيانة وصورة بعد الصيانة',
           ),
         ),
       );
@@ -365,7 +470,9 @@ class _TaskPageState extends State<TaskPage> {
       resolution: isFault ? resolution.text : 'صيانة دورية مكتملة',
       statusAfter: statusAfter,
       healthAfter: healthAfter,
-      maintenancePhoto: maintenancePhoto,
+      maintenanceBeforePhoto: maintenanceBeforePhoto,
+      maintenancePhoto: null,
+      maintenanceAfterPhoto: maintenanceAfterPhoto,
       faultBeforePhoto: faultBeforePhoto,
       faultAfterPhoto: faultAfterPhoto,
     );
