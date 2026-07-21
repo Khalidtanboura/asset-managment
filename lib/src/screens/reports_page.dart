@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 
 import '../controllers/app_controller.dart';
@@ -34,7 +36,17 @@ class ReportsPage extends StatelessWidget {
                       ),
                       const SizedBox(height: 8),
                       Text('الأصول: ${controller.assets.length}'),
-                      Text('مهام الصيانة: ${controller.tasks.length}'),
+                      Text('إجمالي المهام: ${controller.localTaskCount}'),
+                      Text(
+                        'مهام الصيانة الدورية: ${controller.maintenanceTaskCount}',
+                      ),
+                      Text('مهام إصلاح الأعطال: ${controller.faultTaskCount}'),
+                      Text(
+                        'صيانة موثقة بصور قبل/بعد: ${controller.maintenancePhotoPairCount}',
+                      ),
+                      Text(
+                        'إجمالي صور المهام: ${controller.savedTaskPhotoCount}',
+                      ),
                       Text('متوسط صحة الأصول: ${controller.averageHealth}%'),
                     ],
                   ),
@@ -74,6 +86,7 @@ class ReportsPage extends StatelessWidget {
                             'الحالة بعد المهمة: ${task.statusAfter} - ${task.healthAfter}%',
                           ),
                           Text('الصور المحفوظة: ${_photoCount(task)}'),
+                          _taskPhotos(task),
                           const Text('الحفظ: SQLite محلي'),
                         ],
                       ),
@@ -94,5 +107,56 @@ class ReportsPage extends StatelessWidget {
       task.faultBeforePhoto,
       task.faultAfterPhoto,
     ].where((photo) => photo != null).length;
+  }
+
+  Widget _taskPhotos(TaskModel task) {
+    final photos = _photoEntries(task);
+    if (photos.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 10, bottom: 8),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          for (final photo in photos)
+            SizedBox(
+              width: 118,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.memory(
+                      photo.value,
+                      height: 84,
+                      width: 118,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(photo.key, style: const TextStyle(fontSize: 12)),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  List<MapEntry<String, Uint8List>> _photoEntries(TaskModel task) {
+    final entries = <MapEntry<String, Uint8List>>[];
+
+    void add(String label, Uint8List? photo) {
+      if (photo != null) entries.add(MapEntry(label, photo));
+    }
+
+    add('قبل الصيانة', task.maintenanceBeforePhoto);
+    add('صورة الصيانة', task.maintenancePhoto);
+    add('بعد الصيانة', task.maintenanceAfterPhoto);
+    add('قبل الإصلاح', task.faultBeforePhoto);
+    add('بعد الإصلاح', task.faultAfterPhoto);
+
+    return entries;
   }
 }

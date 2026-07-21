@@ -461,23 +461,38 @@ class _TaskPageState extends State<TaskPage> {
     }
 
     setState(() => saving = true);
-    await widget.controller.completeTask(
-      asset: widget.asset,
-      type: type,
-      faultType: isFault ? faultType : '',
-      notes: notes.text,
-      parts: parts.text,
-      resolution: isFault ? resolution.text : 'صيانة دورية مكتملة',
-      statusAfter: statusAfter,
-      healthAfter: healthAfter,
-      maintenanceBeforePhoto: maintenanceBeforePhoto,
-      maintenancePhoto: null,
-      maintenanceAfterPhoto: maintenanceAfterPhoto,
-      faultBeforePhoto: faultBeforePhoto,
-      faultAfterPhoto: faultAfterPhoto,
-    );
+    bool saved = false;
+    try {
+      saved = await widget.controller.completeTask(
+        asset: widget.asset,
+        type: type,
+        faultType: isFault ? faultType : '',
+        notes: notes.text,
+        parts: parts.text,
+        resolution: isFault ? resolution.text : 'صيانة دورية مكتملة',
+        statusAfter: statusAfter,
+        healthAfter: healthAfter,
+        maintenanceBeforePhoto: maintenanceBeforePhoto,
+        maintenancePhoto: null,
+        maintenanceAfterPhoto: maintenanceAfterPhoto,
+        faultBeforePhoto: faultBeforePhoto,
+        faultAfterPhoto: faultAfterPhoto,
+      );
+    } catch (_) {
+      saved = false;
+    }
     if (!mounted) return;
     setState(() => saving = false);
+    if (!saved) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'تعذر حفظ المهمة. تأكد أن الأصل محفوظ وأن قاعدة البيانات تعمل.',
+          ),
+        ),
+      );
+      return;
+    }
     Navigator.popUntil(context, (route) => route.isFirst);
   }
 }

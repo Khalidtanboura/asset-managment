@@ -18,10 +18,46 @@ class AppController extends ChangeNotifier {
 
   int get localTaskCount => tasks.length;
 
+  int get maintenanceTaskCount => tasks.where(_isMaintenanceTask).length;
+
+  int get faultTaskCount => tasks.where(_isFaultTask).length;
+
+  int get maintenancePhotoPairCount => tasks.where((task) {
+    return task.maintenanceBeforePhoto != null &&
+        task.maintenanceAfterPhoto != null;
+  }).length;
+
+  int get savedTaskPhotoCount {
+    return tasks.fold<int>(0, (total, task) {
+      return total +
+          [
+            task.maintenanceBeforePhoto,
+            task.maintenancePhoto,
+            task.maintenanceAfterPhoto,
+            task.faultBeforePhoto,
+            task.faultAfterPhoto,
+          ].where((photo) => photo != null).length;
+    });
+  }
+
   int get averageHealth {
     if (assets.isEmpty) return 0;
     final total = assets.fold<int>(0, (sum, asset) => sum + asset.health);
     return (total / assets.length).round();
+  }
+
+  bool _isMaintenanceTask(TaskModel task) {
+    return task.type == 'صيانة دورية' ||
+        task.maintenanceBeforePhoto != null ||
+        task.maintenancePhoto != null ||
+        task.maintenanceAfterPhoto != null;
+  }
+
+  bool _isFaultTask(TaskModel task) {
+    return task.type == 'إصلاح عطل' ||
+        task.faultType.isNotEmpty ||
+        task.faultBeforePhoto != null ||
+        task.faultAfterPhoto != null;
   }
 
   Future<void> load() async {
@@ -59,7 +95,7 @@ class AppController extends ChangeNotifier {
     await load();
   }
 
-  Future<void> completeTask({
+  Future<bool> completeTask({
     required AssetModel asset,
     required String type,
     required String faultType,
@@ -75,7 +111,7 @@ class AppController extends ChangeNotifier {
     Uint8List? faultAfterPhoto,
   }) async {
     final assetId = asset.id;
-    if (assetId == null) return;
+    if (assetId == null) return false;
 
     final today = _today();
     await db.addTask(
@@ -112,6 +148,7 @@ class AppController extends ChangeNotifier {
       ),
     );
     await load();
+    return true;
   }
 
   String _today() {

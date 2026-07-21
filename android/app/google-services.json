@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "597609438987",
+    "project_id": "tahweela-test",
+    "storage_bucket": "tahweela-test.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:597609438987:android:f6b61535bc19dbb4a58c0e",
+        "android_client_info": {
+          "package_name": "com.example.asset_management"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBxV1tGQKB4l7wjHkd80jamiO-buwk9q7o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:597609438987:android:185aa243f00e065aa58c0e",
+        "android_client_info": {
+          "package_name": "com.example.tahweela"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBxV1tGQKB4l7wjHkd80jamiO-buwk9q7o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

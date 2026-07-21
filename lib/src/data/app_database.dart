@@ -19,7 +19,7 @@ class AppDatabase {
       final path = join(databasesPath, 'asset_management.db');
       _db = await openDatabase(
         path,
-        version: 6,
+        version: 7,
         onCreate: _createTables,
         onUpgrade: _upgradeTables,
       ).timeout(const Duration(seconds: 3));
@@ -82,26 +82,52 @@ class AppDatabase {
       return;
     }
     if (oldVersion < 4) {
-      await db.execute('ALTER TABLE assets ADD COLUMN photo BLOB');
+      await _addColumnIfMissing(db, 'assets', 'photo', 'BLOB');
     }
     if (oldVersion < 5) {
-      await db.execute(
-        'ALTER TABLE tasks ADD COLUMN maintenanceBeforePhoto BLOB',
-      );
-      await db.execute(
-        'ALTER TABLE tasks ADD COLUMN maintenanceAfterPhoto BLOB',
-      );
+      await _addColumnIfMissing(db, 'tasks', 'maintenanceBeforePhoto', 'BLOB');
+      await _addColumnIfMissing(db, 'tasks', 'maintenanceAfterPhoto', 'BLOB');
     }
     if (oldVersion < 6) {
-      await db.execute(
-        'ALTER TABLE tasks ADD COLUMN completed INTEGER NOT NULL DEFAULT 1',
+      await _addColumnIfMissing(
+        db,
+        'tasks',
+        'completed',
+        'INTEGER NOT NULL DEFAULT 1',
       );
-      await db.execute(
-        'ALTER TABLE tasks ADD COLUMN completedAt TEXT NOT NULL DEFAULT ""',
+      await _addColumnIfMissing(
+        db,
+        'tasks',
+        'completedAt',
+        'TEXT NOT NULL DEFAULT ""',
       );
       await db.execute(
         'UPDATE tasks SET completedAt = createdAt WHERE completedAt = ""',
       );
+    }
+    if (oldVersion < 7) {
+      await _ensureTaskPhotoColumns(db);
+    }
+  }
+
+  Future<void> _ensureTaskPhotoColumns(Database db) async {
+    await _addColumnIfMissing(db, 'tasks', 'maintenanceBeforePhoto', 'BLOB');
+    await _addColumnIfMissing(db, 'tasks', 'maintenancePhoto', 'BLOB');
+    await _addColumnIfMissing(db, 'tasks', 'maintenanceAfterPhoto', 'BLOB');
+    await _addColumnIfMissing(db, 'tasks', 'faultBeforePhoto', 'BLOB');
+    await _addColumnIfMissing(db, 'tasks', 'faultAfterPhoto', 'BLOB');
+  }
+
+  Future<void> _addColumnIfMissing(
+    Database db,
+    String table,
+    String column,
+    String definition,
+  ) async {
+    final columns = await db.rawQuery('PRAGMA table_info($table)');
+    final exists = columns.any((row) => row['name'] == column);
+    if (!exists) {
+      await db.execute('ALTER TABLE $table ADD COLUMN $column $definition');
     }
   }
 
@@ -231,8 +257,12 @@ class AppDatabase {
     try {
       await db.insert('tasks', task.toMap());
     } catch (_) {
-      final id = _memoryTasks.length + 1;
-      _memoryTasks.insert(0, TaskModel.fromMap({...task.toMap(), 'id': id}));
+      try {
+        await _ensureTaskPhotoColumns(db);
+        await db.insert('tasks', task.toMap());
+      } catch (_) {
+        rethrow;
+      }
     }
   }
 }

@@ -77,7 +77,17 @@ class HomePage extends StatelessWidget {
                       const SizedBox(height: 10),
                       Text('عدد الأصول: ${controller.assets.length}'),
                       Text(
-                        'مهام الصيانة المحفوظة: ${controller.localTaskCount}',
+                        'إجمالي المهام المحفوظة: ${controller.localTaskCount}',
+                      ),
+                      Text(
+                        'مهام الصيانة الدورية: ${controller.maintenanceTaskCount}',
+                      ),
+                      Text('مهام إصلاح الأعطال: ${controller.faultTaskCount}'),
+                      Text(
+                        'صيانة موثقة بصور قبل/بعد: ${controller.maintenancePhotoPairCount}',
+                      ),
+                      Text(
+                        'إجمالي صور المهام: ${controller.savedTaskPhotoCount}',
                       ),
                       Text('متوسط صحة الأصول: ${controller.averageHealth}%'),
                       if (controller.errorMessage != null) ...[
