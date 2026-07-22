@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'controllers/app_controller.dart';
 import 'data/app_database.dart';
@@ -25,6 +26,13 @@ class _AssetManagementAppState extends State<AssetManagementApp> {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'إدارة الأصول',
+      locale: const Locale('ar'),
+      supportedLocales: const [Locale('ar'), Locale('en')],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
       theme: ThemeData(
         useMaterial3: true,
         fontFamily: 'Arial',

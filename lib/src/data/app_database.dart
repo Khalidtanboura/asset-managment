@@ -19,9 +19,9 @@ class AppDatabase {
       final path = join(databasesPath, 'asset_management.db');
       _db = await openDatabase(
         path,
-        version: 2,
+        version: 8,
         onCreate: _createTables,
-        onUpgrade: _resetTables,
+        onUpgrade: _upgradeTables,
       ).timeout(const Duration(seconds: 3));
       return _db;
     } on MissingPluginException {
@@ -52,21 +52,98 @@ class AppDatabase {
         assetId INTEGER NOT NULL,
         assetName TEXT NOT NULL,
         type TEXT NOT NULL,
+        faultType TEXT NOT NULL,
         notes TEXT NOT NULL,
         parts TEXT NOT NULL,
-        signature TEXT NOT NULL,
-        photoPath TEXT NOT NULL,
-        gpsVerified INTEGER NOT NULL,
+        resolution TEXT NOT NULL,
+        statusAfter TEXT NOT NULL,
+        healthAfter INTEGER NOT NULL,
+        nextMaintenanceDate TEXT NOT NULL,
+        maintenanceBeforePhoto BLOB,
+        maintenancePhoto BLOB,
+        maintenanceAfterPhoto BLOB,
+        faultBeforePhoto BLOB,
+        faultAfterPhoto BLOB,
+        completed INTEGER NOT NULL,
+        completedAt TEXT NOT NULL,
         synced INTEGER NOT NULL,
         createdAt TEXT NOT NULL
       )
     ''');
   }
 
-  Future<void> _resetTables(Database db, int oldVersion, int newVersion) async {
+  Future<void> _upgradeTables(
+    Database db,
+    int oldVersion,
+    int newVersion,
+  ) async {
+    if (oldVersion < 3) {
+      await _resetTables(db, newVersion);
+      return;
+    }
+    if (oldVersion < 5) {
+      await _addColumnIfMissing(db, 'tasks', 'maintenanceBeforePhoto', 'BLOB');
+      await _addColumnIfMissing(db, 'tasks', 'maintenanceAfterPhoto', 'BLOB');
+    }
+    if (oldVersion < 6) {
+      await _addColumnIfMissing(
+        db,
+        'tasks',
+        'completed',
+        'INTEGER NOT NULL DEFAULT 1',
+      );
+      await _addColumnIfMissing(
+        db,
+        'tasks',
+        'completedAt',
+        'TEXT NOT NULL DEFAULT ""',
+      );
+      await db.execute(
+        'UPDATE tasks SET completedAt = createdAt WHERE completedAt = ""',
+      );
+    }
+    if (oldVersion < 7) {
+      await _ensureTaskPhotoColumns(db);
+    }
+    if (oldVersion < 8) {
+      await _ensureTaskScheduleColumns(db);
+    }
+  }
+
+  Future<void> _ensureTaskPhotoColumns(Database db) async {
+    await _addColumnIfMissing(db, 'tasks', 'maintenanceBeforePhoto', 'BLOB');
+    await _addColumnIfMissing(db, 'tasks', 'maintenancePhoto', 'BLOB');
+    await _addColumnIfMissing(db, 'tasks', 'maintenanceAfterPhoto', 'BLOB');
+    await _addColumnIfMissing(db, 'tasks', 'faultBeforePhoto', 'BLOB');
+    await _addColumnIfMissing(db, 'tasks', 'faultAfterPhoto', 'BLOB');
+  }
+
+  Future<void> _ensureTaskScheduleColumns(Database db) async {
+    await _addColumnIfMissing(
+      db,
+      'tasks',
+      'nextMaintenanceDate',
+      'TEXT NOT NULL DEFAULT ""',
+    );
+  }
+
+  Future<void> _addColumnIfMissing(
+    Database db,
+    String table,
+    String column,
+    String definition,
+  ) async {
+    final columns = await db.rawQuery('PRAGMA table_info($table)');
+    final exists = columns.any((row) => row['name'] == column);
+    if (!exists) {
+      await db.execute('ALTER TABLE $table ADD COLUMN $column $definition');
+    }
+  }
+
+  Future<void> _resetTables(Database db, int version) async {
     await db.execute('DROP TABLE IF EXISTS tasks');
     await db.execute('DROP TABLE IF EXISTS assets');
-    await _createTables(db, newVersion);
+    await _createTables(db, version);
   }
 
   Future<void> seedIfEmpty() async {
@@ -173,8 +250,13 @@ class AppDatabase {
     try {
       await db.insert('tasks', task.toMap());
     } catch (_) {
-      final id = _memoryTasks.length + 1;
-      _memoryTasks.insert(0, TaskModel.fromMap({...task.toMap(), 'id': id}));
+      try {
+        await _ensureTaskPhotoColumns(db);
+        await _ensureTaskScheduleColumns(db);
+        await db.insert('tasks', task.toMap());
+      } catch (_) {
+        rethrow;
+      }
     }
   }
 }
